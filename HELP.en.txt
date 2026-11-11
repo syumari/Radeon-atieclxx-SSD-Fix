@@ -1,0 +1,29 @@
+﻿Radeon-atieclxx-SSD-Fix
+======================
+
+This unofficial MIT-licensed workaround checks whether AMD External Events
+Utility (atieclxx.exe) is writing continuously to your system drive. On
+affected systems it can copy itself roughly once per second, at about 56 GB
+per day if it runs continuously. The tool estimates extra writes from
+measured write rate and operating time. The estimate is approximate.
+
+Extract the entire ZIP before starting.
+- START.cmd opens the interface and requests administrator privileges.
+- PRUEFEN.cmd performs a quick status check without elevation.
+- ENTFERNEN.cmd undoes the changes and removes the installed folder.
+
+Targeted protection (recommended) blocks SYSTEM from overwriting or deleting
+the known copy. The service continues to run. A scheduled task checks three
+minutes after startup and every 30 minutes. It reapplies protection when
+needed after a driver update and leaves it off when the issue is resolved.
+
+Disable service stops AMD External Events Utility and disables its startup.
+This can affect FreeSync and frame pacing. Use Undo all changes to remove
+the protection and task and reverse the service change.
+
+The interface follows the Windows display language (German, English or
+Japanese), with English as the fallback. Set RADEON_SSD_FIX_LANG to de, en
+or ja before starting to override it for that session. The scheduled task
+runs as SYSTEM and can use a different display language.
+
+This project is independent of AMD. See LICENSE.txt and the upstream README.
