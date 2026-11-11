@@ -1,100 +1,69 @@
 # Radeon-atieclxx-SSD-Fix
 
-[日本語の使い方](HELP.ja.txt) · [English guide](HELP.en.txt) · [Deutsche Anleitung](LIESMICH.txt)
+[日本語のヘルプ](HELP.ja.txt) · [英語のヘルプ](HELP.en.txt) · [ドイツ語のヘルプ](LIESMICH.txt) · [フォーク元](https://github.com/necanditool/Radeon-atieclxx-SSD-Fix)
 
-### Display language / 表示言語
+Radeonドライバーの `atieclxx.exe` がシステムドライブに継続して書き込んでいるかを調べるWindows用ツールです。余分な書き込み量を推定でき、既知の自己コピーが原因なら、AMD External Events Utilityを動かしたまま対象ファイルへの書き込みを止められます。
 
-Extract the entire ZIP and run `START.cmd`. The tool uses the Windows display language and falls back to English. Supported languages are German, English and Japanese. To override it for a PowerShell session, run `$env:RADEON_SSD_FIX_LANG = 'en'; .\START.cmd`.
+![日本語版でSSDへの継続的な書き込みを検出した画面](docs/screenshot-affected-ja.png)
 
-ZIPをすべて展開し、`START.cmd` を起動するとWindowsの表示言語が使われる。日本語・英語・ドイツ語に対応し、それ以外は英語になる。日本語に固定して起動するには、展開先のPowerShellで `$env:RADEON_SSD_FIX_LANG = 'ja'; .\START.cmd` を実行する。
+*診断画面（サンプル値） · [英語版の画面](docs/screenshot-affected-en.png) · [ドイツ語版の画面](docs/screenshot-betroffen.png)*
 
-**Der Radeon-Treiber schreibt fortwährend auf deine SSD?** Bei betroffenen Treibern kopiert sich `atieclxx.exe` (Dienst „AMD External Events Utility“) jede Sekunde selbst – rund 56 GB pro Tag. Dieses Programm prüft, ob dein PC betroffen ist, schätzt den bisherigen Schaden und stoppt das Dauerschreiben gezielt, ohne den Dienst abzuschalten.
+## ダウンロードと起動
 
-> **Hinweis:** Inoffizieller Workaround, nicht von AMD und ohne Verbindung zu AMD. Nutzung auf eigene Verantwortung, ohne Gewährleistung und ohne Haftung (siehe [LICENSE.txt](LICENSE.txt)).
+1. [多言語版のZIPをダウンロード](https://github.com/syumari/Radeon-atieclxx-SSD-Fix/archive/refs/heads/main.zip)して、すべて展開します。
+2. 展開先の `START.cmd` をダブルクリックします。起動には管理者権限が必要です。
 
-![日本語版の診断結果。SSDへの継続的な書き込みを検出した例](docs/screenshot-affected-ja.png)
+表示はWindowsの表示言語に合わせて、日本語・英語・ドイツ語から自動で選ばれます。未対応の言語では英語になります。管理者権限で開いたPowerShellから一時的に日本語を指定する場合は、展開先で次を実行します。英語は `en`、ドイツ語は `de` を指定します。
 
-*診断で影響を検出した画面（サンプル値） · [English screenshot](docs/screenshot-affected-en.png) · [Deutscher Screenshot](docs/screenshot-betroffen.png)*
-
-## Das Problem
-
-ComputerBase berichtete am 09.11.2026, dass der Dienst „AMD External Events Utility“ des Radeon-Treibers bei vielen Nutzern fortwährend auf das Systemlaufwerk schreibt ([Artikel](https://www.computerbase.de/news/grafikkarten/schnelle-ssd-alterung-radeon-treiber-schreibt-fortwaehrend-daten-auf-die-ssd.100237/)). AMD hat den Fehler bestätigt, eine korrigierte Treiberversion gibt es noch nicht.
-
-Mit der Windows-Ereignisablaufverfolgung (ETW) nachgemessen: Bei betroffenen Treibern kopiert sich `atieclxx.exe` **jede Sekunde selbst** aus dem Treiberordner nach
-
+```powershell
+$env:RADEON_SSD_FIX_LANG = 'ja'
+.\START.cmd
 ```
+
+## どんな問題を調べるのか
+
+2026年11月9日のComputerBaseの記事では、影響を受けるドライバーで `atieclxx.exe` が約1秒ごとに次の場所へ自身をコピーすると報告されています。ファイルは約660 KBで、24時間続くと約56 GBの書き込みになります。[ComputerBaseの記事（ドイツ語）](https://www.computerbase.de/news/grafikkarten/schnelle-ssd-alterung-radeon-treiber-schreibt-fortwaehrend-daten-auf-die-ssd.100237/)
+
+```text
 C:\Windows\System32\config\systemprofile\AppData\Local\AMD\atieclxx.exe
 ```
 
-Die Datei ist rund 660 KB groß, das sind im Dauerbetrieb etwa 56 GB pro Tag. Danach sucht der Dienst nach Installationsdateien des Filtertreibers `amdkmpfd` (Smart Access Memory). Das erklärt, warum manchen das Abschalten von Resizable BAR hilft.
+ツールは書き込み速度を測定し、既知の場所への自己コピー、別の場所への継続的な書き込み、影響なしなどを判定します。SSDへの余分な書き込み量は、測定した速度とAMDグラフィックスの導入後の稼働時間から推定します。SSDから稼働時間を取得できない場合は、1日8時間として計算します。
 
-## Download und Start
+## 対処方法
 
-1. Unter [**Releases**](../../releases/latest) die Datei `Radeon-atieclxx-SSD-Fix.zip` herunterladen.
-2. Die ZIP-Datei vollständig entpacken.
-3. `START.cmd` doppelklicken und die Windows-Abfrage nach Administratorrechten mit „Ja“ bestätigen.
+| ボタン | 動作 |
+| --- | --- |
+| **対象ファイルを保護（推奨）** | SYSTEMアカウントによる既知のコピー先への上書き・削除をブロックします。サービスは動作を続けます。 |
+| **サービスを無効にする** | AMD External Events Utilityを停止して起動を無効にします。FreeSyncやフレームペーシングに影響する場合があります。 |
+| **すべて元に戻す** | ファイル保護と自動チェックを解除し、サービス設定の変更を元に戻します。 |
 
-Falls Windows warnt („Der Computer wurde durch Windows geschützt“): „Weitere Informationen“ → „Trotzdem ausführen“. Oder vor dem Entpacken die ZIP-Datei mit Rechtsklick → Eigenschaften → „Zulassen“ freigeben.
+「Resizable BARとは？」では、元記事で紹介されたBIOS設定による対処を確認できます。設定の変更はBIOSで行います。
 
-## Was das Programm macht
+![日本語版で対象ファイルを保護した後の画面](docs/screenshot-protected-ja.png)
 
-- **Analyse:** misst, ob und wie stark `atieclxx.exe` schreibt, und zeigt, welche Variante vorliegt: Selbstkopie an die bekannte Stelle, Schreiben an einer anderen Stelle oder nicht betroffen.
-- **Schadensschätzung:** wie viel bereits unnötig auf die SSD geschrieben wurde (Schreibrate × Betriebszeit seit der Installation der AMD-Grafik) und welcher Anteil der üblichen Schreib-Garantie das ist.
-- **Fix-Knöpfe:**
+*保護適用後の画面（サンプル値） · [英語版の画面](docs/screenshot-protected-en.png) · [ドイツ語版の画面](docs/screenshot-geschuetzt.png)*
 
-| Knopf | Wirkung |
-|---|---|
-| **Gezielter Schutz** (empfohlen) | Verbietet nur dem Konto SYSTEM, diese eine Kopie zu überschreiben. Der Kopierversuch scheitert sofort, es wird nichts mehr geschrieben. Dienst, FreeSync, Frame Pacing und Hotkeys bleiben unberührt. Richtet zusätzlich eine Automatik ein (siehe unten). |
-| **Dienst deaktivieren** | Die Variante aus dem Artikel. Wirkt immer, kann aber FreeSync und Frame Pacing beeinträchtigen. |
-| **Alles rückgängig** | Nimmt Schutz, Automatik und Dienst-Deaktivierung zurück. |
+### ドライバー更新後の自動チェック
 
-Die dritte Möglichkeit aus dem Artikel, Resizable BAR im BIOS abzuschalten, erklärt das Programm. Umsetzen lässt sie sich nur im BIOS.
+対象ファイルを保護すると、タスクスケジューラに `Radeon-atieclxx-SSD-Fix` が登録されます。Windows起動の3分後と、その後30分ごとにSYSTEM権限で動作します。ドライバー更新後も問題が続いていれば保護を再適用し、解消していれば解除します。処理結果は `C:\Program Files\Radeon-atieclxx-SSD-Fix\protokoll.txt` に記録されます。
 
-![日本語版の診断結果。対象ファイルの保護を適用した後の例](docs/screenshot-protected-ja.png)
+## 状態確認とアンインストール
 
-*対象ファイルを保護した後の画面（サンプル値） · [English screenshot](docs/screenshot-protected-en.png) · [Deutscher Screenshot](docs/screenshot-geschuetzt.png)*
+| ファイル | 動作 |
+| --- | --- |
+| `PRUEFEN.cmd` | 状態を表示し、書き込みを10秒間測定します。管理者権限は不要です。 |
+| `ENTFERNEN.cmd` | 変更を元に戻し、インストール先のフォルダーを削除します。 |
 
-### Automatik nach Treiber-Updates
+対象ファイルを保護した後は、どちらのファイルも `C:\Program Files\Radeon-atieclxx-SSD-Fix` に配置されます。
 
-Der gezielte Schutz richtet die Aufgabe „Radeon-atieclxx-SSD-Fix“ in der Aufgabenplanung ein. Sie läuft als SYSTEM 3 Minuten nach dem Start und danach alle 30 Minuten und
+## 技術情報と制約
 
-- setzt den Schutz neu, wenn ein Treiber-Update die Datei ersetzt hat,
-- prüft nach einem Treiberwechsel selbst, ob AMD den Fehler behoben hat, und hebt den Schutz dann von allein auf,
-- schreibt nur bei Ereignissen ins Protokoll `C:\Program Files\Radeon-atieclxx-SSD-Fix\protokoll.txt`.
+- 対象ファイルのアクセス制御リストに、SYSTEMによる上書き・削除を拒否するエントリを追加します。
+- 自己コピーの検出にはNTFSの変更ジャーナルを使います。必要に応じて短時間のETWトレースで書き込み先を調べます。
+- 測定はバックグラウンドで行います。動作にネット接続は不要で、ドライバー本体のファイルは変更しません。ソースコードは [`Skript`](Skript) にあります。
+- 署名済みのPowerShellスクリプトしか許可されていない環境では起動できません。Windows Homeなどで `msg.exe` が利用できない場合も、自動チェックの結果はログで確認できます。
 
-## Technische Details
+## ライセンス
 
-- Schutz: `icacls <Kopie> /deny *S-1-5-18:(WD,AD,WEA,WA,DE)`, also ein Verweigern-Eintrag nur für das Konto SYSTEM auf genau diese eine Datei.
-- Die Selbstkopie wird über die USN des NTFS-Änderungsjournals erkannt (`FSCTL_READ_FILE_USN_DATA`). Zeitstempel taugen dafür nicht, weil `CopyFile` sie von der Quelle übernimmt. Als Rückfallebene ermittelt eine kurze ETW-Aufzeichnung (höchstens 64 MB, wird sofort gelöscht), wohin geschrieben wird.
-- Die Messung läuft im Hintergrund, das Fenster bleibt bedienbar.
-- Keine Downloads, keine Internetverbindung, keine Änderung am Treiber, keine AMD-Dateien im Paket. Der gesamte Quelltext liegt im Ordner [`Skript`](Skript).
-
-## Status prüfen und entfernen
-
-| Datei | Zweck |
-|---|---|
-| `PRUEFEN.cmd` | Status und 10-Sekunden-Messung, ohne Adminrechte |
-| `ENTFERNEN.cmd` | nimmt alles zurück und löscht den Programmordner |
-
-Nach dem gezielten Schutz liegen beide auch in `C:\Program Files\Radeon-atieclxx-SSD-Fix`.
-
-## Alternative ohne dieses Programm
-
-`Win+R` → `services.msc` → „AMD External Events Utility“ → Beenden, Starttyp „Deaktiviert“. Das ist der Vorschlag aus dem Artikel; er kann FreeSync und Frame Pacing beeinträchtigen.
-
-## Grenzen
-
-- Andere Treiberversionen können sich anders verhalten. Das Programm misst deshalb vorher und greift nur ein, wenn der Fix wirkt.
-- Die Schadensschätzung ist eine Schätzung. Viele SSDs geben ihre Betriebsstunden nicht an Windows weiter, dann wird mit 8 Stunden pro Tag gerechnet.
-- Auf PCs, auf denen per Firmenrichtlinie nur signierte PowerShell-Skripte erlaubt sind, startet das Programm nicht.
-- Unter Windows Home gibt es keine Hinweisfenster der Automatik (`msg.exe` fehlt dort). Alles steht trotzdem im Protokoll.
-
-## Lizenz und Marken
-
-MIT-Lizenz, siehe [LICENSE.txt](LICENSE.txt). AMD, Radeon und Smart Access Memory sind Marken der Advanced Micro Devices, Inc. Dieses Projekt steht in keiner Verbindung zu AMD und wird von AMD weder unterstützt noch geprüft.
-
----
-
-## English summary
-
-Unofficial workaround for an AMD Radeon driver bug reported on 2026-11-09: the "AMD External Events Utility" (`atieclxx.exe`) copies itself every second to `C:\Windows\System32\config\systemprofile\AppData\Local\AMD\atieclxx.exe` (about 660 KB/s, roughly 56 GB per day of continuous SSD writes). This tool measures whether a PC is affected, estimates the writes so far and offers fixes: a targeted file-permission block (deny write/delete for SYSTEM on that single file, so the service, FreeSync and frame pacing keep working) with a scheduled task that keeps it in place after driver updates and lifts it automatically once AMD ships a fix, disabling the service, or reverting everything. German user interface. No downloads, no network access, no driver modification. MIT licensed, not affiliated with AMD.
+[MITライセンス](LICENSE.txt)で公開しています。AMDとは無関係の非公式ツールです。
