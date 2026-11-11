@@ -1,5 +1,13 @@
 # Radeon-atieclxx-SSD-Fix
 
+[日本語の使い方](HELP.ja.txt) · [English guide](HELP.en.txt) · [Deutsche Anleitung](LIESMICH.txt)
+
+### Display language / 表示言語
+
+Extract the entire ZIP and run `START.cmd`. The tool uses the Windows display language and falls back to English. Supported languages are German, English and Japanese. To override it for a PowerShell session, run `$env:RADEON_SSD_FIX_LANG = 'en'; .\START.cmd`.
+
+ZIPをすべて展開し、`START.cmd` を起動するとWindowsの表示言語が使われる。日本語・英語・ドイツ語に対応し、それ以外は英語になる。日本語に固定して起動するには、展開先のPowerShellで `$env:RADEON_SSD_FIX_LANG = 'ja'; .\START.cmd` を実行する。
+
 **Der Radeon-Treiber schreibt fortwährend auf deine SSD?** Bei betroffenen Treibern kopiert sich `atieclxx.exe` (Dienst „AMD External Events Utility“) jede Sekunde selbst – rund 56 GB pro Tag. Dieses Programm prüft, ob dein PC betroffen ist, schätzt den bisherigen Schaden und stoppt das Dauerschreiben gezielt, ohne den Dienst abzuschalten.
 
 > **Hinweis:** Inoffizieller Workaround, nicht von AMD und ohne Verbindung zu AMD. Nutzung auf eigene Verantwortung, ohne Gewährleistung und ohne Haftung (siehe [LICENSE.txt](LICENSE.txt)).
