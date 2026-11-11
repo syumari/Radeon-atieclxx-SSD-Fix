@@ -1,4 +1,5 @@
 ﻿# Radeon-atieclxx-SSD-Fix – Kern: gemeinsame Funktionen für Oberfläche, Wächter, Status und Entfernen.
+. (Join-Path $PSScriptRoot 'Localization.ps1')
 # Wird mit . (dot-source) eingebunden; beim Laden wird nichts verändert.
 $ErrorActionPreference = 'Continue'
 
@@ -36,9 +37,9 @@ function Get-AmdDienst {
   return ($d | Select-Object -First 1)
 }
 function Get-DienstText($Dienst) {
-  if (-not $Dienst) { return 'nicht vorhanden' }
-  $st = switch ([string]$Dienst.Status) { 'Running' { 'läuft' } 'Stopped' { 'gestoppt' } 'StartPending' { 'startet' } 'StopPending' { 'stoppt' } default { [string]$Dienst.Status } }
-  $ty = switch ([string]$Dienst.StartType) { 'Automatic' { 'automatisch' } 'Manual' { 'manuell' } 'Disabled' { 'deaktiviert' } default { [string]$Dienst.StartType } }
+  if (-not $Dienst) { return (Get-FixText 'Message101') }
+  $st = switch ([string]$Dienst.Status) { 'Running' { (Get-FixText 'Message102') } 'Stopped' { (Get-FixText 'Message103') } 'StartPending' { (Get-FixText 'Message104') } 'StopPending' { (Get-FixText 'Message105') } default { [string]$Dienst.Status } }
+  $ty = switch ([string]$Dienst.StartType) { 'Automatic' { (Get-FixText 'Message106') } 'Manual' { (Get-FixText 'Message107') } 'Disabled' { (Get-FixText 'Message108') } default { [string]$Dienst.StartType } }
   return ($st + ', ' + $ty)
 }
 function Write-Protokoll([string]$Text) {
@@ -49,7 +50,7 @@ function Write-Protokoll([string]$Text) {
 }
 function Send-Meldung([string]$Text) {
   $m = Join-Path $env:SystemRoot 'System32\msg.exe'   # nicht in Windows Home vorhanden
-  if (Test-Path -LiteralPath $m) { try { & $m '*' '/TIME:3600' ($Text + ' Details: ' + $script:ProtokollDatei) } catch {} }
+  if (Test-Path -LiteralPath $m) { try { & $m '*' '/TIME:3600' ($Text + (Get-FixText 'Message110') + $script:ProtokollDatei) } catch {} }
 }
 function Wait-Messung([double]$Sekunden, [string]$Phase) {
   # Wartet und meldet den Fortschritt an die Oberfläche (falls vorhanden).
@@ -110,7 +111,7 @@ function Measure-Schreibrate {
   if (-not $start.Count) { return -1 }
   $vorher = @{}
   foreach ($p in $start) { $vorher[[int]$p.ProcessId] = [double]$p.WriteTransferCount }
-  Wait-Messung $Sekunden 'Messe die Schreibrate'
+  Wait-Messung $Sekunden (Get-FixText 'Message111')
   $summe = 0.0; $gefunden = 0
   foreach ($q in @(Get-CimInstance Win32_Process -Filter "Name='atieclxx.exe'" -ErrorAction SilentlyContinue)) {
     $id = [int]$q.ProcessId
@@ -125,7 +126,7 @@ function Test-Selbstkopie {
   if (-not (Test-Path -LiteralPath $script:ZielDatei)) { return $false }
   $u0 = Get-DateiUsn $script:ZielDatei
   if ($u0 -le 0) { return $false }
-  Wait-Messung 3 'Prüfe die Selbstkopie'
+  Wait-Messung 3 (Get-FixText 'Message112')
   $u1 = Get-DateiUsn $script:ZielDatei
   return ($u1 -gt 0 -and $u1 -ne $u0)
 }
@@ -141,9 +142,9 @@ function Get-TraceZiele {
     # Kleine Puffer und höchstens 64 MB Datei, damit eine abgebrochene Aufzeichnung nicht ausufert.
     & logman start $script:TraceName -p Microsoft-Windows-Kernel-File 0x1FB0 0xFF -o $etl -ets -bs 256 -nb 16 64 -max 64 *> $null
     if ($LASTEXITCODE -ne 0) { return @() }
-    Wait-Messung $Sekunden 'Ermittle, wohin geschrieben wird'
+    Wait-Messung $Sekunden (Get-FixText 'Message113')
     & logman stop $script:TraceName -ets *> $null
-    Set-Phase 'Werte die Aufzeichnung aus'
+    Set-Phase (Get-FixText 'Message114')
     $filter = ($ids | ForEach-Object { '@ProcessID=' + $_ }) -join ' or '
     $ev = @(Get-WinEvent -Path $etl -Oldest -FilterXPath ('*[System[Execution[' + $filter + ']]]') -ErrorAction Stop)
     $fo = @{}; $treffer = @{}; $offen = @{}
@@ -311,7 +312,7 @@ function Get-Schaden {
 # ------------------------------------------------------------------ Analyse
 function Get-Analyse {
   param([int]$MessSekunden = 8)
-  Set-Phase 'Lese den Systemzustand'
+  Set-Phase (Get-FixText 'Message115')
   $dienst  = Get-AmdDienst
   $proz    = Get-AmdProzess
   $schutz  = Test-Schutz
@@ -336,7 +337,7 @@ function Get-Analyse {
   }
   elseif ($schutz) { $status = 'Geschuetzt'; $variante = 'Selbstkopie' }
   else { $status = 'NichtBetroffen' }
-  Set-Phase 'Schätze den Schaden'
+  Set-Phase (Get-FixText 'Message116')
   $schaden = Get-Schaden -Status $status -Rate $rate -Ssd $ssd -Befund $befund
   [pscustomobject]@{
     Status = $status; Betroffen = $betroffen; Variante = $variante; Ziele = $ziele
@@ -370,12 +371,12 @@ function Install-Aufgabe {
   if ($Quelle -and (Test-Path -LiteralPath $Quelle)) {
     $quelleVoll = (Resolve-Path -LiteralPath $Quelle).ProviderPath.TrimEnd('\')
     if (-not [string]::Equals($quelleVoll, $skriptZiel.TrimEnd('\'), [StringComparison]::OrdinalIgnoreCase)) {
-      foreach ($f in 'Kern.ps1', 'schutz.ps1', 'Oberflaeche.ps1', 'pruefen.ps1', 'entfernen.ps1') {
+      foreach ($f in 'Localization.ps1', 'Kern.ps1', 'schutz.ps1', 'Oberflaeche.ps1', 'pruefen.ps1', 'entfernen.ps1') {
         $src = Join-Path $quelleVoll $f
         if (Test-Path -LiteralPath $src) { Copy-Item -LiteralPath $src -Destination (Join-Path $skriptZiel $f) -Force }
       }
       $paket = Split-Path -Parent $quelleVoll
-      foreach ($f in 'START.cmd', 'ENTFERNEN.cmd', 'PRUEFEN.cmd', 'LIESMICH.txt', 'LICENSE.txt') {
+      foreach ($f in 'START.cmd', 'ENTFERNEN.cmd', 'PRUEFEN.cmd', 'LIESMICH.txt', 'HELP.en.txt', 'HELP.ja.txt', 'LICENSE.txt') {
         $src = Join-Path $paket $f
         if (Test-Path -LiteralPath $src) { Copy-Item -LiteralPath $src -Destination (Join-Path $script:InstallDir $f) -Force }
       }
@@ -396,7 +397,7 @@ function Install-Aufgabe {
   $set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew
   $sysName = $script:SystemSid.Translate([System.Security.Principal.NTAccount]).Value   # lokalisierter Name von SYSTEM
   $pr = New-ScheduledTaskPrincipal -UserId $sysName -LogonType ServiceAccount -RunLevel Highest
-  $desc = 'Inoffizieller Workaround: verhindert, dass atieclxx.exe (AMD External Events Utility) sich jede Sekunde selbst kopiert und so die SSD abnutzt. Prüft nach Treiber-Updates selbst, ob AMD den Fehler behoben hat. Entfernen: ' + (Join-Path $script:InstallDir 'ENTFERNEN.cmd')
+  $desc = (Get-FixText 'Message117') + (Join-Path $script:InstallDir 'ENTFERNEN.cmd')
   Register-ScheduledTask -TaskName $script:AufgabeName -Action $action -Trigger @($tStart, $tTakt) -Settings $set -Principal $pr -Description $desc -Force | Out-Null
   try {
     # Leserecht für angemeldete Benutzer, damit PRUEFEN.cmd den Status ohne Adminrechte zeigen kann.
