@@ -12,9 +12,9 @@ ZIPをすべて展開し、`START.cmd` を起動するとWindowsの表示言語�
 
 > **Hinweis:** Inoffizieller Workaround, nicht von AMD und ohne Verbindung zu AMD. Nutzung auf eigene Verantwortung, ohne Gewährleistung und ohne Haftung (siehe [LICENSE.txt](LICENSE.txt)).
 
-![Radeon-atieclxx-SSD-Fix: erkannter Fehler mit Schadensschätzung (Beispielwerte)](docs/screenshot-betroffen.png)
+![日本語版の診断結果。SSDへの継続的な書き込みを検出した例](docs/screenshot-affected-ja.png)
 
-*Beispielansicht, alle Werte sind Beispielwerte.*
+*診断で影響を検出した画面（サンプル値） · [English screenshot](docs/screenshot-affected-en.png) · [Deutscher Screenshot](docs/screenshot-betroffen.png)*
 
 ## Das Problem
 
@@ -50,9 +50,9 @@ Falls Windows warnt („Der Computer wurde durch Windows geschützt“): „Weit
 
 Die dritte Möglichkeit aus dem Artikel, Resizable BAR im BIOS abzuschalten, erklärt das Programm. Umsetzen lässt sie sich nur im BIOS.
 
-![Zustand nach dem gezielten Schutz (Beispielwerte)](docs/screenshot-geschuetzt.png)
+![日本語版の診断結果。対象ファイルの保護を適用した後の例](docs/screenshot-protected-ja.png)
 
-*Zustand nach dem gezielten Schutz, ebenfalls mit Beispielwerten.*
+*対象ファイルを保護した後の画面（サンプル値） · [English screenshot](docs/screenshot-protected-en.png) · [Deutscher Screenshot](docs/screenshot-geschuetzt.png)*
 
 ### Automatik nach Treiber-Updates
 
